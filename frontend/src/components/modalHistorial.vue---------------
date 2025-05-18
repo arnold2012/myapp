@@ -1,0 +1,274 @@
+<template>
+  <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+      <div class="mt-3">
+        <div class="flex justify-between items-center border-b pb-3">
+          <h3 class="text-lg font-medium text-gray-900">Historial de la Orden #{{ historialData.length > 0 ? historialData[0].numero_order : '' }}</h3>
+          <button @click="closeModal" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="mt-4">
+          <div v-if="loading" class="flex justify-center items-center py-8">
+            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-2 text-gray-600">Cargando historial...</span>
+          </div>
+          
+          <div v-else-if="error" class="py-4 text-center text-red-500">
+            {{ error }}
+          </div>
+          
+          <div v-else-if="historialData.length === 0" class="py-4 text-center text-gray-500">
+            No se encontraron datos de historial para esta orden.
+          </div>
+          
+          <div v-else>
+            <!-- Información del cliente -->
+            <div class="bg-gray-50 p-4 rounded-md mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <p class="text-sm text-gray-600">Cliente:</p>
+                  <p class="font-medium">{{ historialData[0].razon_social }}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">RUC/CI:</p>
+                  <p class="font-medium">{{ historialData[0].ruc_ci }}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">Fecha de Expedición:</p>
+                  <p class="font-medium">{{ formatDate(historialData[0].fecha_expedicion) }}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">Condición de Pago:</p>
+                  <p class="font-medium">{{ historialData[0].describe_condicion }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Tabla de items -->
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-b">Código</th>
+                    <th class="py-2 px-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-b">Descripción</th>
+                    <th class="py-2 px-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-b">Cant.</th>
+                    <th class="py-2 px-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider border-b">Precio Unit.</th>
+                    <th class="py-2 px-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider border-b">IVA %</th>
+                    <th class="py-2 px-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider border-b">Total</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="(item, index) in historialData" :key="index" class="hover:bg-gray-50">
+                    <td class="py-2 px-3 text-sm text-gray-900 border-b">{{ item.cod_item }}</td>
+                    <td class="py-2 px-3 text-sm text-gray-900 border-b">{{ item.descripcion_item }}</td>
+                    <td class="py-2 px-3 text-sm text-gray-900 border-b">{{ item.cantidad }}</td>
+                    <td class="py-2 px-3 text-sm text-gray-900 text-right border-b">{{ formatCurrency(item.precio_unitario) }}</td>
+                    <td class="py-2 px-3 text-sm text-gray-900 text-right border-b">{{ item.porcentaje_iva }}%</td>
+                    <td class="py-2 px-3 text-sm font-medium text-gray-900 text-right border-b">{{ formatCurrency(item.total_item) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Resumen de totales -->
+            <div class="mt-4 bg-gray-50 p-4 rounded-md">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <h4 class="text-sm font-medium text-gray-600 mb-2">Gravados</h4>
+                  <div class="space-y-1">
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">Gravado 10%:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularGravado10()) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">Gravado 5%:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularGravado5()) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">Exenta:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularExenta()) }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="text-sm font-medium text-gray-600 mb-2">IVA</h4>
+                  <div class="space-y-1">
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">IVA 10%:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularIVA10()) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">IVA 5%:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularIVA5()) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">Total IVA:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularTotalIVA()) }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="text-sm font-medium text-gray-600 mb-2">Totales</h4>
+                  <div class="space-y-1">
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">Subtotal:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularSubtotal()) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600">IVA:</span>
+                      <span class="text-sm font-medium">{{ formatCurrency(calcularTotalIVA()) }}</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-blue-600">
+                      <span>TOTAL:</span>
+                      <span>{{ formatCurrency(calcularTotal()) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+          <button 
+            @click="closeModal" 
+            class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import historialApi from '@/api/GET_Historial';
+
+export default {
+  name: 'ModalHistorial',
+  props: {
+    showModal: {
+      type: Boolean,
+      required: true
+    },
+    orderId: {
+      type: Number,
+      required: true
+    }
+  },
+  data() {
+    return {
+      loading: false,
+      error: null,
+      historialData: []
+    }
+  },
+  watch: {
+    showModal(newVal) {
+      if (newVal && this.orderId) {
+        this.fetchHistorial();
+      }
+    },
+    orderId(newVal) {
+      if (this.showModal && newVal) {
+        this.fetchHistorial();
+      }
+    }
+  },
+  mounted() {
+    // Cargar datos inmediatamente si el modal está visible y hay un ID
+    if (this.showModal && this.orderId) {
+      this.fetchHistorial();
+    }
+  },
+  methods: {
+    async fetchHistorial() {
+      this.loading = true;
+      this.error = null;
+      
+      console.log('Fetching historial for order ID:', this.orderId);
+      
+      try {
+        const response = await historialApi.getHistorialPorOrden(this.orderId);
+        console.log('API response:', response);
+        
+        if (response.success) {
+          this.historialData = response.data;
+          console.log('Historial data loaded:', this.historialData);
+        } else {
+          this.error = response.error || 'Error al obtener el historial de la orden';
+          console.error('Error from API:', this.error);
+        }
+      } catch (error) {
+        console.error('Error al obtener historial:', error);
+        this.error = 'Error de conexión al servidor';
+      } finally {
+        this.loading = false;
+      }
+    },
+    closeModal() {
+      this.$emit('close');
+    },
+    formatCurrency(value) {
+      return new Intl.NumberFormat('es-PY', { 
+        style: 'decimal',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(value);
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      
+      try {
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('es-PY', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(date);
+      } catch (e) {
+        return dateString;
+      }
+    },
+    calcularGravado10() {
+      return this.historialData.reduce((sum, item) => 
+        sum + (item.porcentaje_iva === 10 ? item.gravado_10 : 0), 0);
+    },
+    calcularGravado5() {
+      return this.historialData.reduce((sum, item) => 
+        sum + (item.porcentaje_iva === 5 ? item.gravado_5 : 0), 0);
+    },
+    calcularExenta() {
+      return this.historialData.reduce((sum, item) => 
+        sum + (item.porcentaje_iva === 0 ? item.exenta : 0), 0);
+    },
+    calcularIVA10() {
+      return this.historialData.reduce((sum, item) => 
+        sum + (item.porcentaje_iva === 10 ? item.iva_calculado : 0), 0);
+    },
+    calcularIVA5() {
+      return this.historialData.reduce((sum, item) => 
+        sum + (item.porcentaje_iva === 5 ? item.iva_calculado : 0), 0);
+    },
+    calcularTotalIVA() {
+      return this.historialData.reduce((sum, item) => sum + item.iva_calculado, 0);
+    },
+    calcularSubtotal() {
+      return this.calcularGravado10() + this.calcularGravado5() + this.calcularExenta();
+    },
+    calcularTotal() {
+      return this.historialData.reduce((sum, item) => sum + item.total_item, 0);
+    }
+  }
+}
+</script>

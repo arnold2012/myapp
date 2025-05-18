@@ -1,0 +1,12 @@
+curl -X POST http://localhost:8080/api/productos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cod_item": "014",
+    "descripcion_item": "Coca Cola 2L",
+    "precio_unitario": 7500,
+    "item_activo": true,
+    "id_marcas": 1,
+    "id_impuesto": 2,
+    "id_categoria": 1,
+    "cantidad_inicial": 50
+  }'

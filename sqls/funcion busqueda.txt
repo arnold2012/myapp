@@ -1,0 +1,143 @@
+CREATE OR REPLACE FUNCTION buscar_items(p_busqueda TEXT)
+RETURNS TABLE (
+    id_items BIGINT,
+    codigo_sku character varying,
+    nombre_item character varying,
+    descripcion_item TEXT,
+    precio_unitario NUMERIC,
+    id_impuesto integer,
+    descripcion_impuesto VARCHAR,
+    item_activo BOOLEAN
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        i.id_items,
+        i.codigo_sku,
+        i.nombre_item,
+        i.descripcion_item,
+        i.precio_unitario,
+        i.id_impuesto,
+        imp.descripcion AS descripcion_impuesto,
+        i.item_activo
+    FROM
+        items i
+    JOIN
+        impuestos imp ON i.id_impuesto = imp.id_impuesto
+    WHERE
+        i.codigo_sku ILIKE '%' || p_busqueda || '%'
+        OR i.nombre_item ILIKE '%' || p_busqueda || '%'
+    ORDER BY
+        i.nombre_item;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+#PROCEDURE insert_sales_order
+
+
+CREATE OR REPLACE PROCEDURE public.insert_sales_order(
+    p_id_contacto bigint,
+    p_numero_order numeric,
+    p_fecha_expedicion date,
+    p_items jsonb,
+    p_idcondicion_pago bigint  -- Nuevo parámetro
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_order_id bigint;
+    v_item record;
+BEGIN
+    -- Insert into order table
+    INSERT INTO public."order" (id_contacto, numero_order, fecha_expedicion, idcondicion_pago)
+    VALUES (p_id_contacto, p_numero_order, p_fecha_expedicion, p_idcondicion_pago)
+    RETURNING id_order INTO v_order_id;
+
+    -- Loop through items in the JSON array and insert into order_detail
+    FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(id_item bigint, cantidad integer)
+    LOOP
+        INSERT INTO public.order_detail (id_item, id_order, cantidad)
+        VALUES (v_item.id_item, v_order_id, v_item.cantidad);
+    END LOOP;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Error inserting sales order: %', SQLERRM;
+END;
+$$;
+
+
+ #PROCEDURE #2
+CREATE OR REPLACE PROCEDURE public.insert_sales_order(
+    p_id_contacto bigint,
+    p_numero_order numeric,
+    p_fecha_expedicion date,
+    p_items jsonb,
+    p_idcondicion_pago bigint,
+    OUT p_order_id bigint,  -- Salida del ID generado
+    OUT p_success boolean,
+    OUT p_message text
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Validación de parámetros
+    IF p_id_contacto IS NULL OR p_numero_order IS NULL OR p_fecha_expedicion IS NULL THEN
+        p_success := false;
+        p_message := 'Parámetros requeridos faltantes';
+        RETURN;
+    END IF;
+
+    -- Insertar en la tabla order
+    INSERT INTO public."order" (
+        id_contacto, 
+        numero_order, 
+        fecha_expedicion, 
+        idcondicion_pago,
+        fecha_creacion
+    )
+    VALUES (
+        p_id_contacto, 
+        p_numero_order, 
+        p_fecha_expedicion, 
+        p_idcondicion_pago,
+        NOW()
+    )
+    RETURNING id_order INTO p_order_id;
+
+    -- Validar items
+    IF jsonb_array_length(p_items) = 0 THEN
+        p_success := false;
+        p_message := 'La orden debe contener al menos un ítem';
+        RETURN;
+    END IF;
+
+    -- Insertar detalles
+    INSERT INTO public.order_detail (
+        id_item, 
+        id_order, 
+        cantidad,
+        fecha_creacion
+    )
+    SELECT 
+        (item->>'id_item')::bigint,
+        p_order_id,
+        (item->>'cantidad')::integer,
+        NOW()
+    FROM jsonb_array_elements(p_items) AS item;
+
+    -- Confirmar éxito
+    p_success := true;
+    p_message := 'Orden creada exitosamente';
+
+EXCEPTION
+    WHEN foreign_key_violation THEN
+        p_success := false;
+        p_message := 'Error de referencia: ID de contacto, ítem o condición de pago no existe';
+    WHEN OTHERS THEN
+        p_success := false;
+        p_message := 'Error al crear orden: ' || SQLERRM;
+END;
+$$;
