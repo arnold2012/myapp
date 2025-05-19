@@ -16,9 +16,27 @@ const routes = [
   },
   {
     path: '/productos',
-    name: 'Productos y Referenciales',
+    name: 'Productos',
     component: () => import('@/views/ProductoView.vue'),
     meta: { icon: '📋' }
+  },
+  {
+    path: '/impuestos',
+    name: 'Impuestos',
+    component: () => import('@/views/Impuestos.vue'),
+    meta: { icon: '💰' }
+  },
+  {
+    path: '/marcas',
+    name: 'Marcas',
+    component: () => import('@/views/Marcas.vue'),
+    meta: { icon: '🏷️' }
+  },
+  {
+    path: '/categoria',
+    name: 'Categoría',
+    component: () => import('@/views/Categoria.vue'),
+    meta: { icon: '📂' }
   },
   {
     path: '/orders',

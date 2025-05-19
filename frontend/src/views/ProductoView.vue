@@ -226,192 +226,229 @@
   </section>
 </template>
 
-<script setup>
+<script>
 import { ref, computed, onMounted, watch } from 'vue'
 import productosApi from '@/api/productos'
 import ModalFormularioProductos from '@/components/ModalFormularioProductos.vue'
 
-const productos = ref([])
-const busqueda = ref('')
-const mostrarModal = ref(false)
-const productoSeleccionado = ref(null)
-const cargando = ref(true)
-const mostrarConfirmacion = ref(false)
-const productoAEliminar = ref(null)
-const notificacion = ref({
-  mostrar: false,
-  mensaje: '',
-  tipo: 'success'
-})
+export default {
+  name: "ProductoView",
+  components: {
+    ModalFormularioProductos
+  },
+  setup() {
+    const productos = ref([])
+    const busqueda = ref('')
+    const mostrarModal = ref(false)
+    const productoSeleccionado = ref(null)
+    const cargando = ref(true)
+    const mostrarConfirmacion = ref(false)
+    const productoAEliminar = ref(null)
+    const notificacion = ref({
+      mostrar: false,
+      mensaje: '',
+      tipo: 'success'
+    })
 
-// Variables para paginación
-const paginaActual = ref(1)
-const itemsPorPagina = ref(10)
+    // Variables para paginación
+    const paginaActual = ref(1)
+    const itemsPorPagina = ref(10)
 
-// Productos filtrados según la búsqueda
-const productosFiltrados = computed(() => {
-  if (!busqueda.value.trim()) return productos.value
-  
-  const busquedaLower = busqueda.value.toLowerCase()
-  return productos.value.filter(p => 
-    p.cod_item.toLowerCase().includes(busquedaLower) || 
-    p.descripcion_item.toLowerCase().includes(busquedaLower)
-  )
-})
+    // Productos filtrados según la búsqueda
+    const productosFiltrados = computed(() => {
+      if (!busqueda.value.trim()) return productos.value
+      
+      const busquedaLower = busqueda.value.toLowerCase()
+      return productos.value.filter(p => 
+        p.cod_item.toLowerCase().includes(busquedaLower) || 
+        p.descripcion_item.toLowerCase().includes(busquedaLower)
+      )
+    })
 
-// Total de páginas
-const totalPaginas = computed(() => {
-  return Math.ceil(productosFiltrados.value.length / itemsPorPagina.value)
-})
+    // Total de páginas
+    const totalPaginas = computed(() => {
+      return Math.ceil(productosFiltrados.value.length / itemsPorPagina.value)
+    })
 
-// Productos de la página actual
-const productosPaginados = computed(() => {
-  const inicio = (paginaActual.value - 1) * itemsPorPagina.value
-  const fin = inicio + itemsPorPagina.value
-  return productosFiltrados.value.slice(inicio, fin)
-})
+    // Productos de la página actual
+    const productosPaginados = computed(() => {
+      const inicio = (paginaActual.value - 1) * itemsPorPagina.value
+      const fin = inicio + itemsPorPagina.value
+      return productosFiltrados.value.slice(inicio, fin)
+    })
 
-// Índices para mostrar en la paginación
-const inicio = computed(() => {
-  if (productosFiltrados.value.length === 0) return 0
-  return (paginaActual.value - 1) * itemsPorPagina.value + 1
-})
+    // Índices para mostrar en la paginación
+    const inicio = computed(() => {
+      if (productosFiltrados.value.length === 0) return 0
+      return (paginaActual.value - 1) * itemsPorPagina.value + 1
+    })
 
-const fin = computed(() => {
-  if (productosFiltrados.value.length === 0) return 0
-  return Math.min(paginaActual.value * itemsPorPagina.value, productosFiltrados.value.length)
-})
+    const fin = computed(() => {
+      if (productosFiltrados.value.length === 0) return 0
+      return Math.min(paginaActual.value * itemsPorPagina.value, productosFiltrados.value.length)
+    })
 
-// Páginas visibles en la paginación
-const paginasVisibles = computed(() => {
-  const totalPags = totalPaginas.value
-  const actual = paginaActual.value
-  const delta = 1 // Número de páginas a mostrar a cada lado de la página actual
-  
-  if (totalPags <= 5) {
-    // Si hay 5 o menos páginas, mostrar todas
-    return Array.from({ length: totalPags }, (_, i) => i + 1)
-  }
-  
-  let paginas = []
-  
-  // Siempre incluir la primera página
-  paginas.push(1)
-  
-  // Agregar puntos suspensivos si la página actual está lejos del inicio
-  if (actual > 2 + delta) {
-    paginas.push('...')
-  }
-  
-  // Agregar páginas alrededor de la página actual
-  const rangoInicio = Math.max(2, actual - delta)
-  const rangoFin = Math.min(totalPags - 1, actual + delta)
-  
-  for (let i = rangoInicio; i <= rangoFin; i++) {
-    paginas.push(i)
-  }
-  
-  // Agregar puntos suspensivos si la página actual está lejos del final
-  if (actual < totalPags - 1 - delta) {
-    paginas.push('...')
-  }
-  
-  // Siempre incluir la última página
-  if (totalPags > 1) {
-    paginas.push(totalPags)
-  }
-  
-  return paginas
-})
+    // Páginas visibles en la paginación
+    const paginasVisibles = computed(() => {
+      const totalPags = totalPaginas.value
+      const actual = paginaActual.value
+      const delta = 1 // Número de páginas a mostrar a cada lado de la página actual
+      
+      if (totalPags <= 5) {
+        // Si hay 5 o menos páginas, mostrar todas
+        return Array.from({ length: totalPags }, (_, i) => i + 1)
+      }
+      
+      let paginas = []
+      
+      // Siempre incluir la primera página
+      paginas.push(1)
+      
+      // Agregar puntos suspensivos si la página actual está lejos del inicio
+      if (actual > 2 + delta) {
+        paginas.push('...')
+      }
+      
+      // Agregar páginas alrededor de la página actual
+      const rangoInicio = Math.max(2, actual - delta)
+      const rangoFin = Math.min(totalPags - 1, actual + delta)
+      
+      for (let i = rangoInicio; i <= rangoFin; i++) {
+        paginas.push(i)
+      }
+      
+      // Agregar puntos suspensivos si la página actual está lejos del final
+      if (actual < totalPags - 1 - delta) {
+        paginas.push('...')
+      }
+      
+      // Siempre incluir la última página
+      if (totalPags > 1) {
+        paginas.push(totalPags)
+      }
+      
+      return paginas
+    })
 
-const cargarProductos = async () => {
-  cargando.value = true
-  try {
-    const res = await productosApi.buscarProductos(busqueda.value || '')
-    if (res.success) {
-      productos.value = [...res.data]
-      // Resetear a la primera página cuando cambia la búsqueda
-      paginaActual.value = 1
-    } else {
-      mostrarNotificacion('Error al cargar productos', 'error')
+    const cargarProductos = async () => {
+      cargando.value = true
+      try {
+        const res = await productosApi.buscarProductos(busqueda.value || '')
+        if (res.success) {
+          productos.value = [...res.data]
+          // Resetear a la primera página cuando cambia la búsqueda
+          paginaActual.value = 1
+        } else {
+          mostrarNotificacion('Error al cargar productos', 'error')
+        }
+      } catch (error) {
+        mostrarNotificacion('Error de conexión', 'error')
+        console.error('Error al cargar productos:', error)
+      } finally {
+        cargando.value = false
+      }
     }
-  } catch (error) {
-    mostrarNotificacion('Error de conexión', 'error')
-    console.error('Error al cargar productos:', error)
-  } finally {
-    cargando.value = false
-  }
-}
 
-const buscar = () => {
-  cargarProductos()
-}
-
-const cambiarPagina = (pagina) => {
-  if (pagina < 1 || pagina > totalPaginas.value) return
-  paginaActual.value = pagina
-}
-
-const abrirModal = (producto = null) => {
-  productoSeleccionado.value = producto ? { ...producto } : null
-  mostrarModal.value = true
-}
-
-const cerrarModal = () => {
-  mostrarModal.value = false
-  productoSeleccionado.value = null
-}
-
-const productoGuardado = () => {
-  mostrarNotificacion('Producto guardado con éxito', 'success')
-  cerrarModal()
-  cargarProductos()
-}
-
-const confirmarEliminar = (producto) => {
-  productoAEliminar.value = producto
-  mostrarConfirmacion.value = true
-}
-
-const eliminarConfirmado = async () => {
-  if (!productoAEliminar.value) return
-  
-  try {
-    const res = await productosApi.deleteProducto(productoAEliminar.value.id_item)
-    if (res.success) {
-      mostrarNotificacion('Producto eliminado con éxito', 'success')
+    const buscar = () => {
       cargarProductos()
-    } else {
-      mostrarNotificacion(`Error al eliminar: ${res.error}`, 'error')
     }
-  } catch (error) {
-    mostrarNotificacion('Error de conexión', 'error')
-  } finally {
-    mostrarConfirmacion.value = false
-    productoAEliminar.value = null
+
+    const cambiarPagina = (pagina) => {
+      if (pagina < 1 || pagina > totalPaginas.value) return
+      paginaActual.value = pagina
+    }
+
+    const abrirModal = (producto = null) => {
+      productoSeleccionado.value = producto ? { ...producto } : null
+      mostrarModal.value = true
+    }
+
+    const cerrarModal = () => {
+      mostrarModal.value = false
+      productoSeleccionado.value = null
+    }
+
+    const productoGuardado = () => {
+      mostrarNotificacion('Producto guardado con éxito', 'success')
+      cerrarModal()
+      cargarProductos()
+    }
+
+    const confirmarEliminar = (producto) => {
+      productoAEliminar.value = producto
+      mostrarConfirmacion.value = true
+    }
+
+    const eliminarConfirmado = async () => {
+      if (!productoAEliminar.value) return
+      
+      try {
+        const res = await productosApi.deleteProducto(productoAEliminar.value.id_item)
+        if (res.success) {
+          mostrarNotificacion('Producto eliminado con éxito', 'success')
+          cargarProductos()
+        } else {
+          mostrarNotificacion(`Error al eliminar: ${res.error}`, 'error')
+        }
+      } catch (error) {
+        mostrarNotificacion('Error de conexión', 'error')
+      } finally {
+        mostrarConfirmacion.value = false
+        productoAEliminar.value = null
+      }
+    }
+
+    const mostrarNotificacion = (mensaje, tipo = 'success') => {
+      notificacion.value = {
+        mostrar: true,
+        mensaje,
+        tipo
+      }
+      
+      setTimeout(() => {
+        notificacion.value.mostrar = false
+      }, 3000)
+    }
+
+    const formatNumber = (num) => {
+      return num.toLocaleString('es-PY')
+    }
+
+    // Resetear la página cuando cambia la búsqueda
+    watch(busqueda, () => {
+      paginaActual.value = 1
+    })
+
+    onMounted(cargarProductos)
+
+    return {
+      productos,
+      busqueda,
+      mostrarModal,
+      productoSeleccionado,
+      cargando,
+      mostrarConfirmacion,
+      productoAEliminar,
+      notificacion,
+      paginaActual,
+      itemsPorPagina,
+      productosFiltrados,
+      totalPaginas,
+      productosPaginados,
+      inicio,
+      fin,
+      paginasVisibles,
+      cargarProductos,
+      buscar,
+      cambiarPagina,
+      abrirModal,
+      cerrarModal,
+      productoGuardado,
+      confirmarEliminar,
+      eliminarConfirmado,
+      mostrarNotificacion,
+      formatNumber
+    }
   }
 }
-
-const mostrarNotificacion = (mensaje, tipo = 'success') => {
-  notificacion.value = {
-    mostrar: true,
-    mensaje,
-    tipo
-  }
-  
-  setTimeout(() => {
-    notificacion.value.mostrar = false
-  }, 3000)
-}
-
-const formatNumber = (num) => {
-  return num.toLocaleString('es-PY')
-}
-
-// Resetear la página cuando cambia la búsqueda
-watch(busqueda, () => {
-  paginaActual.value = 1
-})
-
-onMounted(cargarProductos)
 </script>
