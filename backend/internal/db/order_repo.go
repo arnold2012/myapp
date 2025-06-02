@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -20,49 +19,50 @@ type InsertOrderParams struct {
 	IDCondicionPago int64       `json:"idcondicion_pago"`
 }
 
-// InsertSalesOrder now inserts using CURRENT_TIMESTAMP and returns the new order ID
+// InsertSalesOrder inserts directly using SQL without the stored procedure
 func InsertSalesOrder(ctx context.Context, db *sql.DB, params InsertOrderParams) (int64, error) {
-	itemsJSON, err := json.Marshal(params.Items)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, fmt.Errorf("error serializando items: %w", err)
+		return 0, fmt.Errorf("error iniciando transacción: %w", err)
 	}
 
-	// Call stored procedure without fecha_expedicion parameter
-	_, err = db.ExecContext(ctx, `
-		CALL public.insert_sales_order($1, $2, $3::jsonb, $4)
-	`,
-		params.IDContacto,
-		params.NumeroOrder,
-		itemsJSON,
-		params.IDCondicionPago,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("error ejecutando procedimiento almacenado: %w", err)
-	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
-	// Query the newly inserted order ID
+	// Insertar en la tabla order
 	var orderID int64
-	err = db.QueryRowContext(ctx, `
-		SELECT id_order
-		FROM public."order"
-		WHERE numero_order = $1
-		  AND id_contacto = $2
-		ORDER BY id_order DESC
-		LIMIT 1
-	`, params.NumeroOrder, params.IDContacto).Scan(&orderID)
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO public."order" (id_contacto, numero_order, fecha_expedicion, idcondicion_pago)
+		VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+		RETURNING id_order
+	`, params.IDContacto, params.NumeroOrder, params.IDCondicionPago).Scan(&orderID)
 
 	if err != nil {
-		return 0, fmt.Errorf("error obteniendo ID de la orden: %w", err)
+		return 0, fmt.Errorf("error insertando en order: %w", err)
+	}
+
+	// Insertar ítems en order_detail
+	for _, item := range params.Items {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO public.order_detail (id_item, id_order, cantidad)
+			VALUES ($1, $2, $3)
+		`, item.IDItem, orderID, item.Cantidad)
+
+		if err != nil {
+			return 0, fmt.Errorf("error insertando en order_detail: %w", err)
+		}
 	}
 
 	// Programar la caducidad de la orden después de 1 minuto
 	go func(id int64) {
 		time.Sleep(1 * time.Minute)
-		
-		// Crear un nuevo contexto para esta operación
+
 		expireCtx := context.Background()
-		
-		// Actualizar la orden si sigue en estado PENDIENTE
 		db.ExecContext(expireCtx, `
 			UPDATE public."order"
 			SET estado_order = 'CADUCADA'
@@ -82,7 +82,7 @@ func UpdateExpiredOrders(ctx context.Context, db *sql.DB) error {
 		WHERE estado_order = 'PENDIENTE'
 		AND fecha_expedicion < (CURRENT_TIMESTAMP - INTERVAL '1 minute')
 	`)
-	
+
 	return err
 }
 
