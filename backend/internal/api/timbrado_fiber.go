@@ -40,4 +40,39 @@ func RegisterTimbradoRoutes(app *fiber.App, dbConn *sql.DB) {
 			"id_timbrado": idTimbrado,
 		})
 	})
+		// POST /api/timbrado
+app.Post("/api/timbrado", func(c *fiber.Ctx) error {
+	var t db.Timbrado
+	if err := c.BodyParser(&t); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "JSON inválido"})
+	}
+	if t.FechaAutorizacion.IsZero() || t.FechaInicioVigencia.IsZero() {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Fechas requeridas"})
+	}
+	id, err := db.CrearTimbrado(context.Background(), dbConn, t)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(http.StatusCreated).JSON(fiber.Map{"id_timbrado": id})
+})
+
+// PUT /api/timbrado/:id
+app.Put("/api/timbrado/:id", func(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "ID inválido"})
+	}
+	var t db.Timbrado
+	if err := c.BodyParser(&t); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "JSON inválido"})
+	}
+	t.IDTimbrado = int64(id)
+	if err := db.ActualizarTimbrado(context.Background(), dbConn, t); err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.SendStatus(http.StatusNoContent)
+})
+
 }
+
+

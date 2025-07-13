@@ -63,6 +63,18 @@ func SetupFiberRoutes(database *sql.DB) *fiber.App {
     historialRepo := db.NewHistorialRepo(database)
     historialHandler := api.NewHistorialHandler(historialRepo)
     historialHandler.RegisterRoutes(app)
+    
+    // Establecimientos
+    establecimientoRepo := db.NewEstablecimientoRepo(database)
+    establecimientoHandler := api.NewEstablecimientoHandler(establecimientoRepo)
+    establecimientoHandler.RegisterRoutes(app)
+
+    // Punto de Expedición
+    puntoRepo := db.NewPuntoRepo(database)
+    puntoHandler := api.NewPuntoExpedicionHandler(puntoRepo)
+    puntoHandler.RegisterRoutes(app)
+
+
 
     return app
 }

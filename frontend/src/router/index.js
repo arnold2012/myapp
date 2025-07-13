@@ -18,25 +18,25 @@ const routes = [
     path: '/productos',
     name: 'Productos',
     component: () => import('@/views/ProductoView.vue'),
-    meta: { icon: '📋' }
+    meta: { icon: '📋', dropdown: 'productos' }
   },
   {
     path: '/impuestos',
     name: 'Impuestos',
     component: () => import('@/views/Impuestos.vue'),
-    meta: { icon: '💰' }
+    meta: { icon: '💰', dropdown: 'productos' }
   },
   {
     path: '/marcas',
     name: 'Marcas',
     component: () => import('@/views/Marcas.vue'),
-    meta: { icon: '🏷️' }
+    meta: { icon: '🏷️', dropdown: 'productos' }
   },
   {
     path: '/categoria',
     name: 'Categoría',
     component: () => import('@/views/Categoria.vue'),
-    meta: { icon: '📂' }
+    meta: { icon: '📂', dropdown: 'productos' }
   },
   {
     path: '/orders',
@@ -55,6 +55,12 @@ const routes = [
     name: 'Crear factura',
     component: () => import('@/views/FacturarOrderView.vue'),
     meta: { icon: '🧾' }
+  },
+  {
+    path: '/timbrado',
+    name: 'Timbrado',
+    component: () => import('@/views/TimbradoView.vue'),
+    meta: { icon: '📋', dropdown: 'ajustes' }
   },
   {
     path: '/:pathMatch(.*)*',

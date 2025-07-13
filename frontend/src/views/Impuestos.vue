@@ -1,62 +1,176 @@
 <template>
-  <section class="max-w-4xl mx-auto p-6">
+  <div class="max-w-6xl mx-auto p-6">
+    <!-- Header con botón para abrir modal -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Impuestos</h1>
-      <button @click="abrirModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      <h1 class="text-3xl font-bold text-gray-800">Gestión de Impuestos</h1>
+      <button 
+        @click="abrirModal()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
         Nuevo Impuesto
       </button>
     </div>
 
-    <table class="w-full bg-white shadow rounded-md">
-      <thead class="bg-gray-100 text-left">
-        <tr>
-          <th class="p-3">Cod</th>
-          <th class="p-3">Porcentaje IVA</th>
-          <th class="p-3 text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="imp in impuestos" :key="imp.id_impuesto" class="border-t hover:bg-gray-50">
-          <td class="p-3">{{ imp.id_impuesto }}</td>
-          <td class="p-3">{{ imp.porcentaje_iva }}%</td>
-          <td class="p-3 text-center">
-            <button @click="abrirModal(imp)" class="text-blue-600 hover:underline mr-2">Editar</button>
-            <button @click="eliminarImpuesto(imp.id_impuesto)" class="text-red-600 hover:underline">Eliminar</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Mensajes de estado -->
+    <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+        </svg>
+        {{ error }}
+      </div>
+    </div>
 
-    <div v-if="mostrarModal" class="fixed inset-0  bg-opacity-40 flex items-center justify-center">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 class="text-lg font-semibold mb-4">
-          {{ impuestoSeleccionado ? 'Editar Impuesto' : 'Nuevo Impuesto' }}
-        </h2>
-        <form @submit.prevent="guardar">
+    <div v-if="success" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>
+        {{ successMessage }}
+      </div>
+    </div>
+
+    <!-- Tabla de impuestos -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Lista de Impuestos</h2>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Código
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Porcentaje IVA
+              </th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="imp in impuestos" :key="imp.id_impuesto" class="hover:bg-gray-50 transition-colors duration-150">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {{ imp.id_impuesto }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ imp.porcentaje_iva }}%
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button 
+                    @click="abrirModal(imp)" 
+                    class="text-blue-600 hover:text-blue-900 transition-colors duration-150"
+                    title="Editar"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    @click="eliminarImpuesto(imp.id_impuesto)" 
+                    class="text-red-600 hover:text-red-900 transition-colors duration-150"
+                    title="Eliminar"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="impuestos.length === 0">
+              <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                <div class="flex flex-col items-center">
+                  <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  <p class="text-lg font-medium">No hay impuestos registrados</p>
+                  <p class="text-sm">Haz clic en "Nuevo Impuesto" para agregar el primero</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div v-if="mostrarModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <!-- Header del modal -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 class="text-xl font-semibold text-gray-800">
+            {{ impuestoSeleccionado ? 'Editar Impuesto' : 'Nuevo Impuesto' }}
+          </h2>
+          <button @click="cerrarModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Formulario -->
+        <form @submit.prevent="guardar" class="p-6">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Porcentaje IVA</label>
-            <input
-              v-model.number="form.porcentaje_iva"
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              class="w-full p-2 border rounded"
-            />
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Porcentaje IVA *
+            </label>
+            <div class="relative rounded-md shadow-sm">
+              <input
+                v-model.number="form.porcentaje_iva"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                placeholder="Ej: 10.00"
+              />
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 sm:text-sm">%</span>
+              </div>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">
+              Ingrese el porcentaje de IVA sin el símbolo %
+            </p>
           </div>
 
-          <div class="flex justify-end gap-3">
-            <button type="button" @click="cerrarModal" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+          <!-- Botones del modal -->
+          <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <button 
+              type="button" 
+              @click="cerrarModal"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
               Cancelar
             </button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Guardar
+            <button 
+              type="submit" 
+              :disabled="isSubmitting"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span v-if="isSubmitting" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Guardando...
+              </span>
+              <span v-else>{{ impuestoSeleccionado ? 'Actualizar' : 'Guardar' }}</span>
             </button>
           </div>
         </form>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup>
@@ -67,16 +181,32 @@ const impuestos = ref([])
 const mostrarModal = ref(false)
 const impuestoSeleccionado = ref(null)
 const form = ref({ porcentaje_iva: 0 })
+const error = ref('')
+const success = ref(false)
+const successMessage = ref('')
+const isSubmitting = ref(false)
 
 const cargarImpuestos = async () => {
-  const res = await impuestosApi.getAll()
-  if (res.success) impuestos.value = res.data
+  try {
+    const res = await impuestosApi.getAll()
+    if (res.success) {
+      impuestos.value = res.data
+    } else {
+      error.value = res.error || 'Error al cargar impuestos'
+      setTimeout(() => { error.value = '' }, 5000)
+    }
+  } catch (err) {
+    error.value = 'Error de conexión al servidor'
+    setTimeout(() => { error.value = '' }, 5000)
+  }
 }
 
 const abrirModal = (imp = null) => {
   impuestoSeleccionado.value = imp
   form.value = imp ? { ...imp } : { porcentaje_iva: 0 }
   mostrarModal.value = true
+  error.value = ''
+  success.value = false
 }
 
 const cerrarModal = () => {
@@ -86,30 +216,62 @@ const cerrarModal = () => {
 }
 
 const guardar = async () => {
-  const res = impuestoSeleccionado.value
-    ? await impuestosApi.update(impuestoSeleccionado.value.id_impuesto, form.value)
-    : await impuestosApi.create(form.value)
+  isSubmitting.value = true
+  error.value = ''
+  success.value = false
+  
+  try {
+    const res = impuestoSeleccionado.value
+      ? await impuestosApi.update(impuestoSeleccionado.value.id_impuesto, form.value)
+      : await impuestosApi.create(form.value)
 
-  if (res.success) {
-    cerrarModal()
-    cargarImpuestos()
-  } else {
-    alert('❌ ' + res.error)
+    if (res.success) {
+      cerrarModal()
+      await cargarImpuestos()
+      success.value = true
+      successMessage.value = impuestoSeleccionado.value 
+        ? '✅ Impuesto actualizado correctamente' 
+        : '✅ Impuesto creado correctamente'
+      setTimeout(() => { success.value = false }, 5000)
+    } else {
+      error.value = res.error || 'Error al guardar'
+    }
+  } catch (err) {
+    error.value = 'Error de conexión al servidor'
+  } finally {
+    isSubmitting.value = false
   }
 }
 
 const eliminarImpuesto = async (id) => {
-  if (confirm('¿Desea eliminar este impuesto?')) {
+  if (!confirm('¿Está seguro que desea eliminar este impuesto?')) return
+  
+  try {
     const res = await impuestosApi.delete(id)
-    if (res.success) cargarImpuestos()
-    else alert('❌ ' + res.error)
+    if (res.success) {
+      await cargarImpuestos()
+      success.value = true
+      successMessage.value = '✅ Impuesto eliminado correctamente'
+      setTimeout(() => { success.value = false }, 5000)
+    } else {
+      error.value = res.error || 'Error al eliminar'
+      setTimeout(() => { error.value = '' }, 5000)
+    }
+  } catch (err) {
+    error.value = 'Error de conexión al servidor'
+    setTimeout(() => { error.value = '' }, 5000)
   }
 }
 
 onMounted(cargarImpuestos)
 </script>
+
 <style scoped>
-th, td {
-  text-align: left;
+/* Animaciones para el modal */
+.modal-enter-active, .modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+.modal-enter-from, .modal-leave-to {
+  opacity: 0;
 }
 </style>
